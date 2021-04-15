@@ -10,10 +10,8 @@ import java.util.concurrent.TimeUnit;
 import java.nio.file.Paths;
 import java.util.HashMap;
 
-import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.gax.paging.Page;
 import com.google.api.services.dataproc.*;
 import com.google.api.services.dataproc.model.HadoopJob;
 import com.google.api.services.dataproc.model.Job;
@@ -21,18 +19,25 @@ import com.google.api.services.dataproc.model.JobPlacement;
 import com.google.api.services.dataproc.model.SubmitJobRequest;
 import com.google.api.services.dataproc.model.JobReference;
 import com.google.cloud.storage.*;
-import com.google.cloud.storage.Storage.*;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.hadoop.fs.FileUtil;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Gui {
+
+    private static String randomNumber = String.valueOf(new Random().nextInt(999999999));
+
+    /* CONSTANTS */
+    /* These constants need to be changed to make this program runnable on another machine! */
+    private static final String projectId = "cs1600-gcp-project";
+    private static final String clusterId = "cluster-8881";
+    private static final String bucket_name = "grey-fertich-bucket" + randomNumber;
+    private static final String bucket_location = "gs://" + bucket_name;
+    private static final String google_credential_json_file_path = "gcp_key.json";
+    private static final String jar_location = "gs://grey-fertich-bucket/hj.jar";
+    private static final String input_data_folder_name = "/inputData/";
+    /* End constants */
 
     private static JFrame frame;
     private static JPanel[][] panelHolder;
@@ -41,13 +46,8 @@ public class Gui {
     private static Storage storage;
     private static GoogleCredentials credentials;
     private static boolean file_selected = false;
-    private static String randomNumber = String.valueOf(new Random().nextInt(999999999));
-    private static String bucket_name = "grey-fertich-bucket" + randomNumber;
-    private static String bucket_location = "gs://" + bucket_name;
     private static JFileChooser fc = new JFileChooser();
     private static Job job;
-    private static String projectId = "cs1600-gcp-project";
-    private static String clusterId = "cluster-8881";
     private static String jobId = "job-" + randomNumber;
     private static HashMap<String, String> resultMap;
 
@@ -74,16 +74,7 @@ public class Gui {
 
     public static boolean setupGCPAuth() {
         try {
-//            GoogleCredentials creds = GoogleCredentials.fromStream(new FileInputStream("credentials.json"));
-//            HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(creds);
-//            Dataproc dataproc = new Dataproc.Builder(new NetHttpTransport(), new JacksonFactory(), requestInitializer).build();
-//            HadoopJob hJob = new HadoopJob();
-
-            //credentials = GoogleCredentials.getApplicationDefault().createScoped(DataprocScopes.all());
-            File f = new File("gcp_key.json");
-            Scanner sc = new Scanner(f);
-            System.out.println(sc.nextLine());
-            credentials = GoogleCredentials.fromStream(new FileInputStream("gcp_key.json")).createScoped(DataprocScopes.all());
+            credentials = GoogleCredentials.fromStream(new FileInputStream(google_credential_json_file_path)).createScoped(DataprocScopes.all());
             if (credentials != null) {
                 System.out.println("Got credentials");
             } else throw new Exception("Error getting credentials");
@@ -133,9 +124,9 @@ public class Gui {
                         .setPlacement(new JobPlacement().setClusterName(clusterId))
                         .setHadoopJob(new HadoopJob().setMainClass("MyHadoopJob")
                                 .setJarFileUris(ImmutableList.of(
-                                        "gs://grey-fertich-bucket/hj.jar"))
+                                        jar_location))
                                 .setArgs(ImmutableList.of(
-                                        bucket_location + "/inputData/",
+                                        bucket_location + input_data_folder_name,
                                         bucket_location + "/output-" + jobId)))))
                 .execute();
         System.out.println("Running job");
